@@ -11,173 +11,13 @@ import {keymap} from "prosemirror-keymap"
 import {baseKeymap} from "prosemirror-commands"
 import { TextSelection } from "prosemirror-state"
 import { Plugin } from "prosemirror-state"
+import { SyntaxRegistry } from "./Syntax"
+import asciidoc from "./language/asciidoc.json"
 
-// 1. 扩展 schema（支持标题、列表等）
 const mySchema = new Schema({
   nodes: addListNodes(basicSchema.spec.nodes as any, "paragraph block*", "block"),
   marks: basicSchema.spec.marks
 })
-
-// 2. 关键！定义标题转换的 InputRule
-// 一级标题：= 
-const headingLevel1Rule = new InputRule(
-  // 正则：行首一个等号 + 空格（^ 表示行首）
-  /^=\s$/,
-  (state, match, start, end) => {
-    // 关键判断：当前光标所在的 block 必须是 paragraph
-    const $pos = state.selection.$anchor
-    const currentBlockType = $pos.parent.type
-
-    // 如果不是 paragraph，直接拒绝触发
-    if (currentBlockType.name !== "paragraph") {
-      return null
-    }
-
-    // 先找到包含这段文本的块节点的位置
-    const $start = state.doc.resolve(start)
-    const blockStart = $start.start($start.depth)
-    const blockEnd = $start.end($start.depth)
-    
-    // 删除匹配的文本，然后设置块类型
-    const tr = state.tr
-    tr.delete(start, end)
-    
-    // 使用映射来计算删除后的块位置
-    const deletedLength = end - start
-    const newBlockStart = blockStart
-    const newBlockEnd = blockEnd - deletedLength
-    
-    tr.setBlockType(newBlockStart, newBlockEnd, mySchema.nodes.heading, { level: 1 })
-      .scrollIntoView()
-
-    tr.setMeta("intentional_heading", true)
-    return tr
-  }
-)
-
-// 二级标题：== 
-const headingLevel2Rule = new InputRule(
-  /^==\s$/,
-  (state, match, start, end) => {
-    const $pos = state.selection.$anchor
-    const currentBlockType = $pos.parent.type
-
-    if (currentBlockType.name !== "paragraph") {
-      return null
-    }
-
-    const $start = state.doc.resolve(start)
-    const blockStart = $start.start($start.depth)
-    const blockEnd = $start.end($start.depth)
-    
-    const tr = state.tr
-    tr.delete(start, end)
-    
-    const deletedLength = end - start
-    const newBlockStart = blockStart
-    const newBlockEnd = blockEnd - deletedLength
-    
-    tr.setBlockType(newBlockStart, newBlockEnd, mySchema.nodes.heading, { level: 2 })
-      .scrollIntoView()
-
-    tr.setMeta("intentional_heading", true)
-    return tr
-  }
-)
-
-// 三级标题：=== 
-const headingLevel3Rule = new InputRule(
-  /^===\s$/,
-  (state, match, start, end) => {
-    const $pos = state.selection.$anchor
-    const currentBlockType = $pos.parent.type
-
-    if (currentBlockType.name !== "paragraph") {
-      return null
-    }
-
-    const $start = state.doc.resolve(start)
-    const blockStart = $start.start($start.depth)
-    const blockEnd = $start.end($start.depth)
-    
-    const tr = state.tr
-    tr.delete(start, end)
-    
-    const deletedLength = end - start
-    const newBlockStart = blockStart
-    const newBlockEnd = blockEnd - deletedLength
-    
-    tr.setBlockType(newBlockStart, newBlockEnd, mySchema.nodes.heading, { level: 3 })
-      .scrollIntoView()
-
-    tr.setMeta("intentional_heading", true)
-    return tr
-  }
-)
-
-// 四级标题：==== 
-const headingLevel4Rule = new InputRule(
-  /^====\s$/,
-  (state, match, start, end) => {
-    const $pos = state.selection.$anchor
-    const currentBlockType = $pos.parent.type
-
-    if (currentBlockType.name !== "paragraph") {
-      return null
-    }
-
-    const $start = state.doc.resolve(start)
-    const blockStart = $start.start($start.depth)
-    const blockEnd = $start.end($start.depth)
-    
-    const tr = state.tr
-    tr.delete(start, end)
-    
-    const deletedLength = end - start
-    const newBlockStart = blockStart
-    const newBlockEnd = blockEnd - deletedLength
-    
-    tr.setBlockType(newBlockStart, newBlockEnd, mySchema.nodes.heading, { level: 4 })
-      .scrollIntoView()
-
-    tr.setMeta("intentional_heading", true)
-    return tr
-  }
-)
-
-const boldItalicRule = new InputRule(
-  /\*\*\*(.+?)\*\*\*/,
-  (state, match, start, end) => {
-    const text = match[1]
-    
-    // 检查 schema 中是否有 strong 和 em 标记
-    const strongMark = state.schema.marks.strong
-    const emMark = state.schema.marks.em
-    
-    if (!strongMark || !emMark) {
-      return null
-    }
-    
-    // 创建带有 strong 和 em 标记的文本节点
-    const textNode = state.schema.text(text, [
-      strongMark.create(),
-      emMark.create()
-    ])
-
-    const paragraph = state.schema.text(" ",[])
-
-    // 创建 transaction：删除匹配的文本，插入新节点
-    const tr = state.tr
-    tr.replaceWith(start, end, [textNode,paragraph])
-    
-    // 将光标设置到带标记文本节点的末尾，这样用户就可以继续输入普通文本
-    const newPos = start + textNode.nodeSize
-    tr.setSelection(TextSelection.near(tr.doc.resolve(newPos), -1))
-    tr.scrollIntoView()
-    
-    return tr
-  }
-)
 
 // 核心插件：监听空标题，自动降级并恢复源码
 const restoreSourceOnEmptyHeading = new Plugin({
@@ -206,7 +46,8 @@ const restoreSourceOnEmptyHeading = new Plugin({
 
     const tr = newState.tr
     let modified = false
-    console.log(newState.doc)
+    // console.log(newState.doc)
+    console.log(view.state.plugins)
     // 遍历所有变化的范围
     newState.doc.descendants((node, pos) => {
       // 只关心 heading 节点
@@ -240,15 +81,7 @@ const view = new EditorView(document.getElementById("editor")!, {
       history(),
       keymap({"Mod-z": undo, "Mod-y": redo}),
       keymap(baseKeymap),
-      inputRules({ 
-        rules: [
-          headingLevel4Rule,  // 最长的先匹配
-          headingLevel3Rule,
-          headingLevel2Rule,
-          headingLevel1Rule,
-          boldItalicRule
-        ] 
-      }),
+      inputRules({ rules: SyntaxRegistry() }),
       restoreSourceOnEmptyHeading   // ← 加上这行！
     ]
   })
@@ -345,4 +178,8 @@ window.replaceCurrentBlockWithJSON = (blockJSON: any) => {
 
   dispatch(tr)
   console.log("当前 block 已替换！光标放到末尾")
+}
+
+window.printLanguageFile = () => {
+  console.log(asciidoc)
 }
