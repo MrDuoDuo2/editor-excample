@@ -2,10 +2,7 @@
 
 import { EditorState } from "prosemirror-state"
 import { EditorView } from "prosemirror-view"
-import { Schema } from "prosemirror-model"
-import { schema as basicSchema } from "prosemirror-schema-basic"
-import { addListNodes } from "prosemirror-schema-list"
-import { InputRule, inputRules } from "prosemirror-inputrules"   // ← 新增这行
+import { inputRules } from "prosemirror-inputrules"   // ← 新增这行
 import {undo, redo, history} from "prosemirror-history"
 import {keymap} from "prosemirror-keymap"
 import {baseKeymap} from "prosemirror-commands"
@@ -13,11 +10,9 @@ import { TextSelection } from "prosemirror-state"
 import { Plugin } from "prosemirror-state"
 import { SyntaxRegistry } from "./Syntax"
 import asciidoc from "./language/asciidoc.json"
+import { mySchema } from "./schema"
+import { PluginManifest } from "./PluginManifest"
 
-const mySchema = new Schema({
-  nodes: addListNodes(basicSchema.spec.nodes as any, "paragraph block*", "block"),
-  marks: basicSchema.spec.marks
-})
 
 // 核心插件：监听空标题，自动降级并恢复源码
 const restoreSourceOnEmptyHeading = new Plugin({
@@ -73,6 +68,8 @@ const restoreSourceOnEmptyHeading = new Plugin({
   }
 })
 
+SyntaxRegistry.register(asciidoc as unknown as PluginManifest)
+
 // 3. 创建编辑器，把我们的 rule 加进去
 const view = new EditorView(document.getElementById("editor")!, {
   state: EditorState.create({
@@ -81,7 +78,7 @@ const view = new EditorView(document.getElementById("editor")!, {
       history(),
       keymap({"Mod-z": undo, "Mod-y": redo}),
       keymap(baseKeymap),
-      inputRules({ rules: SyntaxRegistry() }),
+      inputRules({ rules: SyntaxRegistry.buildInputRules() }),
       restoreSourceOnEmptyHeading   // ← 加上这行！
     ]
   })

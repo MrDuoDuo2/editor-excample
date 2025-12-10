@@ -14,7 +14,7 @@
         "name": "strong",
         "type": "mark",
         "trigger": "\\*([^\\*]+)\\*",
-        "mark": "strong",
+        "mark": "strongMark",
         "inclusive": false
       },
       {

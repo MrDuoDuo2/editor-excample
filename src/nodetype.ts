@@ -1,10 +1,5 @@
-import { Schema } from "prosemirror-model"
-import { addListNodes } from "prosemirror-schema-list"
-import { schema as basicSchema } from "prosemirror-schema-basic"
-
-const mySchema = new Schema({
-    nodes: addListNodes(basicSchema.spec.nodes as any, "paragraph block*", "block"),
-    marks: basicSchema.spec.marks
-  })
+import { mySchema } from "./schema"
 
 export const heading = mySchema.nodes.heading
+export const StrongMark = mySchema.marks.strong
+export const EmMark = mySchema.marks.em
