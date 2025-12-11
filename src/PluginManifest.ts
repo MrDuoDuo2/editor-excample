@@ -1,8 +1,8 @@
 export type SyntaxRule = {
-    type: "block" | "mark"
+    type: "online_block" | "multi_line_block" | "mark"
     trigger: string
     node?: string
-    mark?: string
+    mark?: string[]
     getAttrs?: string | ((match: string[]) => any)
     restoreSource?: string | ((attrs: any) => string)
     autoRestoreOnEmpty?: boolean

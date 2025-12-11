@@ -1,0 +1,51 @@
+.code-block-wrapper {
+    margin: 1em 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    background: #1e1e1e;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+  
+  .code-block-header {
+    background: #2d2d2d;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #ccc;
+    font-size: 13px;
+  }
+  
+  .code-lang {
+    font-weight: 600;
+    color: #7ec699;
+  }
+  
+  .code-copy-btn {
+    background: none;
+    border: none;
+    color: #ccc;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  
+  .code-copy-btn:hover {
+    background: #444;
+    color: white;
+  }
+  
+  .code-block-wrapper pre {
+    margin: 0 !important;
+    padding: 16px !important;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    overflow-x: auto;
+  }
+  
+  .code-block-wrapper code {
+    background: none !important;
+    padding: 0 !important;
+  }

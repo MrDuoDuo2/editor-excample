@@ -12,7 +12,165 @@ import { SyntaxRegistry } from "./Syntax"
 import asciidoc from "./language/asciidoc.json"
 import { mySchema } from "./schema"
 import { PluginManifest } from "./PluginManifest"
+import { NodeView } from "prosemirror-view"
+import {
+  EditorView as CodeMirror, keymap as cmKeymap, drawSelection
+} from "@codemirror/view"
+import {javascript} from "@codemirror/lang-javascript"
+import {defaultKeymap} from "@codemirror/commands"
+import {syntaxHighlighting, defaultHighlightStyle} from "@codemirror/language"
+import "./code.css"
 
+// class CodeBlockView {
+//   node: any
+//   dom: HTMLElement
+//   contentDOM: HTMLElement
+
+//   constructor(node, view, getPos) {
+//     this.node = node
+
+//     // 外层容器（美化用）
+//     this.dom = document.createElement("div")
+//     this.dom.className = "code-block-wrapper"
+
+//     // 语言标签 + 复制按钮
+//     const header = document.createElement("div")
+//     header.className = "code-block-header"
+
+//     const lang = node.attrs.language || "text"
+//     const langSpan = document.createElement("span")
+//     langSpan.className = "code-lang"
+//     langSpan.textContent = lang
+
+//     const copyBtn = document.createElement("button")
+//     copyBtn.className = "code-copy-btn"
+//     copyBtn.textContent = "Copy"
+//     copyBtn.onclick = () => {
+//       navigator.clipboard.writeText(node.textContent)
+//       copyBtn.textContent = "Copied!"
+//       setTimeout(() => copyBtn.textContent = "Copy", 2000)
+//     }
+
+//     header.appendChild(langSpan)
+//     header.appendChild(copyBtn)
+//     this.dom.appendChild(header)
+
+//     // 真正的 <pre><code>（ProseMirror 用它来编辑内容）
+//     const pre = document.createElement("pre")
+//     const code = document.createElement("code")
+//     code.className = `language-${lang}`
+//     pre.appendChild(code)
+//     this.dom.appendChild(pre)
+
+//     this.contentDOM = code  // 光标和输入都在这里
+
+//     // Create a CodeMirror instance
+//     this.cm = new CodeMirror({
+//       doc: this.node.textContent,
+//       extensions: [
+//         cmKeymap.of([
+//           ...defaultKeymap
+//         ]),
+//         drawSelection(),
+//         syntaxHighlighting(defaultHighlightStyle),
+//         javascript(),
+//         // CodeMirror.updateListener.of(update => this.forwardUpdate(update))
+//       ]
+//     })
+//   }
+
+//   // 可选：更新语言时重新渲染
+//   update(node) {
+//     if (node.type.name !== "code_block") return false
+//     if (node.attrs.language !== this.node.attrs.language) {
+//       const langSpan = this.dom.querySelector(".code-lang")
+//       if (langSpan) langSpan.textContent = node.attrs.language || "text"
+//     }
+//     this.node = node
+//     return true
+//   }
+// }
+
+
+class CodeBlockView {
+  node: any
+  dom: HTMLElement
+  // contentDOM: HTMLElement
+  view: any
+  getPos: any
+  cm: CodeMirror
+  updating: boolean
+
+  constructor(node: any, view: any, getPos: any) {
+    // Store for later
+    this.node = node
+    this.view = view
+    this.getPos = getPos
+
+
+        //语言标签
+    const header = document.createElement("div")
+    header.className = "code-block-header"
+    const lang = node.attrs.language || "text"
+    const langSpan = document.createElement("span")
+    langSpan.className = "code-lang"
+    langSpan.textContent = lang
+    // const copyBtn = document.createElement("button")
+    // copyBtn.className = "code-copy-btn"
+    // copyBtn.textContent = "Copy"
+    // copyBtn.onclick = () => {
+    //   navigator.clipboard.writeText(node.textContent)
+    //   copyBtn.textContent = "Copied!"
+    //   setTimeout(() => copyBtn.textContent = "Copy", 2000)
+    // }
+    header.appendChild(langSpan)
+    // header.appendChild(copyBtn)
+    // this.dom.appendChild(header)
+    // this.dom = header
+    // this.dom.appendChild(this.cm.dom)
+
+    // Create a CodeMirror instance
+    this.cm = new CodeMirror({
+      doc: this.node.textContent,
+      extensions: [
+        cmKeymap.of([
+          // ...this.codeMirrorKeymap(),
+          ...defaultKeymap
+        ]),
+        drawSelection(),
+        syntaxHighlighting(defaultHighlightStyle),
+        javascript(),
+        // CodeMirror.updateListener.of(update => this.forwardUpdate(update))
+      ]
+    })
+
+    this.dom = this.cm.dom
+
+    // The editor's outer node is our DOM representation
+    
+
+
+
+
+    // 外层容器（美化用）
+    // this.dom = document.createElement("div")
+    // this.dom.className = "code-block-wrapper"
+     
+    // This flag is used to avoid an update loop between the outer and
+    // inner editor
+    this.updating = false
+  }
+  
+}
+
+// 注册 NodeView 的 Plugin（这可能是你看到的 “NodeViewPlugin”）
+const nodeViewPlugin = new Plugin({
+  props: {
+    nodeViews: {
+      code_block: (node, view, getPos) => new CodeBlockView(node, view, getPos), // 只针对 code_block 节点
+    }
+  }
+});
 
 // 核心插件：监听空标题，自动降级并恢复源码
 const restoreSourceOnEmptyHeading = new Plugin({
@@ -42,11 +200,12 @@ const restoreSourceOnEmptyHeading = new Plugin({
     const tr = newState.tr
     let modified = false
     // console.log(newState.doc)
-    console.log(view.state.plugins)
+    // console.log(view.state.plugins)
     // 遍历所有变化的范围
     newState.doc.descendants((node, pos) => {
+      console.log(node)
       // 只关心 heading 节点
-      if (node.type.name === "heading" && node.content.size === 0 && isDeleteKey) {
+      if (node.type.name != "text" && node.content.size === 0 && isDeleteKey) {
         // 找到空标题的位置
         const from = pos
         const to = pos + node.nodeSize
@@ -79,7 +238,8 @@ const view = new EditorView(document.getElementById("editor")!, {
       keymap({"Mod-z": undo, "Mod-y": redo}),
       keymap(baseKeymap),
       inputRules({ rules: SyntaxRegistry.buildInputRules() }),
-      restoreSourceOnEmptyHeading   // ← 加上这行！
+      restoreSourceOnEmptyHeading,   // ← 加上这行！
+      nodeViewPlugin
     ]
   })
 })
@@ -177,6 +337,9 @@ window.replaceCurrentBlockWithJSON = (blockJSON: any) => {
   console.log("当前 block 已替换！光标放到末尾")
 }
 
-window.printLanguageFile = () => {
-  console.log(asciidoc)
+window.createMultiLineText = () => {
+   console.log("createMultiLineText")
+   const tr = view.state.tr
+   tr.insert(0, mySchema.nodes.code_block.createAndFill({language: "JavaScript"}))
+   view.dispatch(tr)
 }

@@ -3,7 +3,7 @@
     "rules": [
       {
         "name": "heading",
-        "type": "block",
+        "type": "online_block",
         "trigger": "^={1,6}\\s$",
         "node": "heading",
         "getAttrs": "match[0].match(/=/g).length",
@@ -13,14 +13,14 @@
       {
         "name": "strong",
         "type": "mark",
-        "trigger": "\\*([^\\*]+)\\*",
-        "mark": "strongMark",
+        "trigger": "\\*\\*\\*(.+?)\\*\\*\\*",
+        "mark": ["strongMark", "emMark"],
         "inclusive": false
       },
       {
         "name": "code_block",
-        "type": "block",
-        "trigger": "^```$",
+        "type": "multi_line_block",
+        "trigger": "^```\\s*(.+?)$",
         "node": "code_block",
         "restoreSource": "```"
       }

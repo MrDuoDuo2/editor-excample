@@ -1,9 +1,9 @@
 import {InputRule} from "prosemirror-inputrules"
 import { mySchema } from "./schema"
 import {SyntaxRule,PluginManifest} from "./PluginManifest"
-import { heading } from "./nodetype"
+import { checkMark } from "./nodetype"
 import { NodeType } from "prosemirror-model"
-import { TextSelection } from "prosemirror-state"
+import { TextSelection,NodeSelection } from "prosemirror-state"
 
 export const SyntaxRegistry = {
   // 内部状态：存储已注册的 manifests
@@ -27,8 +27,17 @@ export const SyntaxRegistry = {
   },
 
   getMarkFromString(rule: SyntaxRule) : Mark[] {
-    return mySchema.marks[mark] as MarkType
-  }
+    const marks = []
+    for (let index = 0; index < rule.mark?.length; index++) {
+      const mark = checkMark(rule.mark?.[index])
+      if(mark){
+        marks.push(mark)
+      }
+    }
+
+    console.log(marks);
+    return marks
+  },
   
   // 根据已注册的 manifests 生成 InputRules
   buildInputRules(): InputRule[] {
@@ -36,8 +45,10 @@ export const SyntaxRegistry = {
     
     for (const manifest of this.manifests) {
       for (const rule of manifest.rules) {
-        if (rule.type === "block" && rule.node) {
+        if (rule.type === "online_block" && rule.node) {
           rules.push(this.createBlockRule(rule))
+        } else if (rule.type === "multi_line_block" && rule.node) {
+          rules.push(this.createMultiLineBlockRule(rule))
         } else if (rule.type === "mark" && rule.mark) {
           rules.push(this.createMarkRule(rule))
         }
@@ -87,6 +98,57 @@ export const SyntaxRegistry = {
        }
     )
   },
+
+  createMultiLineBlockRule(rule: SyntaxRule) : InputRule{
+    return new InputRule(
+      new RegExp(rule.trigger),
+      (state, match, start, end) => {
+        // 关键判断：当前光标所在的 block 必须是 paragraph
+        const $pos = state.selection.$anchor
+        const currentBlockType = $pos.parent.type
+
+        // 如果不是 paragraph，直接拒绝触发
+        if (currentBlockType.name !== "paragraph") {
+          return null
+        }
+
+        // 先找到包含这段文本的块节点的位置
+        const $start = state.doc.resolve(start)
+        const blockStart = $start.start($start.depth)
+        const blockEnd = $start.end($start.depth)
+        
+        // 删除匹配的文本，然后设置块类型
+        const tr = state.tr
+        tr.delete(start, end)
+        
+        // 使用映射来计算删除后的块位置
+        const deletedLength = end - start
+        const newBlockStart = blockStart
+        const newBlockEnd = blockEnd - deletedLength
+
+        const language_name = (match[1] || "")
+        const node = this.getNodeFromString(rule.node || "")
+
+        
+        const codeBlock = mySchema.node("code_block", { language: language_name })
+        const paragraph = mySchema.text(" ",[])
+
+        console.log(newBlockStart, newBlockEnd)
+        
+        // tr.replace(newBlockStart, newBlockEnd, codeBlock)
+        // 使用 state.schema 而不是局部创建的 mySchema
+        tr.setBlockType(newBlockStart, newBlockEnd, node, { language: language_name })
+        tr.setMeta("intentional_heading", true)
+        //   .scrollIntoView()
+        const selection = NodeSelection.create(tr.doc, 0)
+        tr.setSelection(selection)
+        // tr.insert(start + 1, state.schema.text("\n"))  // 代码块里有个空行
+
+       
+        return tr
+      }
+    )
+  },
   
   // 私有方法：创建 mark 规则
   createMarkRule(rule: SyntaxRule): InputRule {
@@ -102,10 +164,10 @@ export const SyntaxRegistry = {
         if (!strongMark || !emMark) {
           return null
         }
-        
+        const marks = this.getMarkFromString(rule);
         // 创建带有 strong 和 em 标记的文本节点
         const textNode = mySchema.text(text, [
-          
+          ...marks.map(mark => mark.create())
         ])
   
         const paragraph = mySchema.text(" ",[])
