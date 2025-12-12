@@ -119,7 +119,7 @@ export const SyntaxRegistry = {
         
         // 删除匹配的文本，然后设置块类型
         const tr = state.tr
-        tr.delete(start, end)
+        tr.delete(start, end+1)
         
         // 使用映射来计算删除后的块位置
         const deletedLength = end - start
@@ -128,23 +128,12 @@ export const SyntaxRegistry = {
 
         const language_name = (match[1] || "")
         const node = this.getNodeFromString(rule.node || "")
-
-        
-        const codeBlock = mySchema.node("code_block", { language: language_name })
-        const paragraph = mySchema.text(" ",[])
-
-        console.log(newBlockStart, newBlockEnd)
         
         // tr.replace(newBlockStart, newBlockEnd, codeBlock)
         // 使用 state.schema 而不是局部创建的 mySchema
         tr.setBlockType(newBlockStart, newBlockEnd, node, { language: language_name })
-        tr.setMeta("intentional_heading", true)
-        //   .scrollIntoView()
-        const selection = NodeSelection.create(tr.doc, 0)
-        tr.setSelection(selection)
-        // tr.insert(start + 1, state.schema.text("\n"))  // 代码块里有个空行
-
-       
+          .scrollIntoView()
+          .setMeta("newlyCreatedCodeBlock", true)  // 标记这是新创建的代码块
         return tr
       }
     )

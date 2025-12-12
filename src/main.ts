@@ -6,7 +6,7 @@ import { inputRules } from "prosemirror-inputrules"   // ← 新增这行
 import {undo, redo, history} from "prosemirror-history"
 import {keymap} from "prosemirror-keymap"
 import {baseKeymap} from "prosemirror-commands"
-import { TextSelection } from "prosemirror-state"
+import { TextSelection, NodeSelection } from "prosemirror-state"
 import { Plugin } from "prosemirror-state"
 import { SyntaxRegistry } from "./Syntax"
 import asciidoc from "./language/asciidoc.json"
@@ -17,6 +17,8 @@ import {
   EditorView as CodeMirror, keymap as cmKeymap, drawSelection
 } from "@codemirror/view"
 import {javascript} from "@codemirror/lang-javascript"
+import {rust} from "@codemirror/lang-rust"
+import {python} from "@codemirror/lang-python"
 import {defaultKeymap} from "@codemirror/commands"
 import {syntaxHighlighting, defaultHighlightStyle} from "@codemirror/language"
 import "./code.css"
@@ -111,7 +113,7 @@ class CodeBlockView {
         //语言标签
     const header = document.createElement("div")
     header.className = "code-block-header"
-    const lang = node.attrs.language || "text"
+    const lang = node.attrs.language || "javascript"
     const langSpan = document.createElement("span")
     langSpan.className = "code-lang"
     langSpan.textContent = lang
@@ -144,23 +146,39 @@ class CodeBlockView {
       ]
     })
 
-    this.dom = this.cm.dom
+
+    // this.dom = this.cm.dom
 
     // The editor's outer node is our DOM representation
-    
-
-
-
 
     // 外层容器（美化用）
-    // this.dom = document.createElement("div")
-    // this.dom.className = "code-block-wrapper"
+    this.dom = document.createElement("div")
+    this.dom.className = "code-block-wrapper"
+    this.dom.style.color = "white"
+    this.dom.append(header)
+    this.dom.append(this.cm.dom)
      
     // This flag is used to avoid an update loop between the outer and
     // inner editor
     this.updating = false
+    
+    // 延迟调用 focus，确保 DOM 已经渲染完成
+    // 使用 requestAnimationFrame 确保在下一帧渲染后执行
+    requestAnimationFrame(() => {
+      this.cm.focus()
+    })
   }
   
+  // 可选：添加 update 方法来处理节点更新
+  update(node: any) {
+    if (node.type.name !== "code_block") return false
+    if (node.attrs.language !== this.node.attrs.language) {
+      // 更新语言显示等
+      this.node = node
+    }
+    return true
+  }
+
 }
 
 // 注册 NodeView 的 Plugin（这可能是你看到的 “NodeViewPlugin”）
@@ -242,6 +260,20 @@ const view = new EditorView(document.getElementById("editor")!, {
       nodeViewPlugin
     ]
   })
+})
+
+view.dom.addEventListener("click", (event) => {
+  const clickedDOM = event.target as HTMLElement
+  
+  // 关键一行！拿到点击位置的 pos
+  const pos = view.posAtDOM(clickedDOM, 0)   // 第2个参数是 offset，一般写 0 就行
+  
+  if (pos !== null && pos !== undefined) {
+    console.log("你点击的 DOM 对应的 pos 是：", pos)
+    // // 顺手把光标跳过去（可选）
+    // const selection = TextSelection.create(view.state.doc, pos)
+    // view.dispatch(view.state.tr.setSelection(selection))
+  }
 })
 
 
@@ -342,4 +374,9 @@ window.createMultiLineText = () => {
    const tr = view.state.tr
    tr.insert(0, mySchema.nodes.code_block.createAndFill({language: "JavaScript"}))
    view.dispatch(tr)
+}
+
+window.selectionMoveToNine = () => {
+    const selection = TextSelection.create(view.state.doc, 9)
+    view.dispatch(view.state.tr.setSelection(selection))
 }
