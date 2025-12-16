@@ -63,6 +63,8 @@ export const SyntaxRegistry = {
     return new InputRule(
       new RegExp(rule.trigger),
       (state, match, start, end) => {
+
+        console.log("match", match);
           // 关键判断：当前光标所在的 block 必须是 paragraph
          const $pos = state.selection.$anchor
          const currentBlockType = $pos.parent.type
@@ -126,7 +128,24 @@ export const SyntaxRegistry = {
         const newBlockStart = blockStart
         const newBlockEnd = blockEnd - deletedLength
 
-        const language_name = (match[1] || "")
+        // 获取 ``` 之后输入的内容（语言名称）
+        // 在 ProseMirror InputRule 中：
+        // - 当用户按回车键时，正则中的 $ 会匹配行尾（回车符位置）
+        // - match[0] 是整个匹配的文本（例如："```javascript" 或 "``` javascript"）
+        // - match[1] 是第一个捕获组，即 ``` 之后、回车之前的内容（例如："javascript" 或 " javascript"）
+        // - end 参数是匹配结束的位置（包含回车符的位置）
+        // - 注意：回车符本身通常不会包含在 match[0] 中，但 end 会指向回车符的位置
+        const fullMatch = match[0] || ""
+        const capturedContent = match[1] || ""  // 捕获组内容（可能包含前导空格）
+        const language_name = capturedContent.trim()  // 去除首尾空格，得到纯语言名称
+        
+        console.log("=== 代码块触发调试信息 ===")
+        console.log("完整匹配文本 (match[0]):", JSON.stringify(fullMatch))
+        console.log("捕获组内容 (match[1]):", JSON.stringify(capturedContent))
+        console.log("提取的语言名称:", language_name || "(未指定)")
+        console.log("匹配位置: start=", start, "end=", end)
+        console.log("==========================")
+        
         const node = this.getNodeFromString(rule.node || "")
         
         // tr.replace(newBlockStart, newBlockEnd, codeBlock)

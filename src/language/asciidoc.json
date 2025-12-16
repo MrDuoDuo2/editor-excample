@@ -20,7 +20,7 @@
       {
         "name": "code_block",
         "type": "multi_line_block",
-        "trigger": "^```\\s*(.+?)$",
+        "trigger": "^```(.+?)",
         "node": "code_block",
         "restoreSource": "```"
       }
