@@ -13,7 +13,7 @@
   "description": "",
   "devDependencies": {
     "typescript": "^5.0.0",
-    "vite": "^5.0.0"
+    "vite": "^7.3.0"
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.0",
