@@ -134,6 +134,10 @@ export const SyntaxRegistry = {
         tr.setBlockType(newBlockStart, newBlockEnd, node, { language: language_name })
           .scrollIntoView()
           .setMeta("newlyCreatedCodeBlock", true)  // 标记这是新创建的代码块
+
+        
+        const newEmptyBlock = mySchema.nodes.paragraph.createAndFill({})!
+        tr.insert(newBlockEnd, newEmptyBlock)
         return tr
       }
     )
