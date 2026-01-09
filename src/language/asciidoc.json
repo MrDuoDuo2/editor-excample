@@ -1,0 +1,28 @@
+{
+    "name": "asciidoc",
+    "rules": [
+      {
+        "name": "heading",
+        "type": "online_block",
+        "trigger": "^={1,6}\\s$",
+        "node": "heading",
+        "getAttrs": "match[0].match(/=/g).length",
+        "restoreSource": "level => '='.repeat(level) + ' '",
+        "autoRestoreOnEmpty": true
+      },
+      {
+        "name": "strong",
+        "type": "mark",
+        "trigger": "\\*\\*\\*(.+?)\\*\\*\\*",
+        "mark": ["strongMark", "emMark"],
+        "inclusive": false
+      },
+      {
+        "name": "code_block",
+        "type": "multi_line_block",
+        "trigger": "^```(.+?)",
+        "node": "code_block",
+        "restoreSource": "```"
+      }
+    ]
+  }
